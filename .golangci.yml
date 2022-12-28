@@ -39,3 +39,9 @@ linters-settings:
       - name: unused-parameter
       - name: unreachable-code
       - name: redefines-builtin-id
+issues:
+  exclude-rules:
+  - linters:
+    - revive
+    text: "var-naming: don't use an underscore in package name"
+    path: 'mock(\w+)/doc.go$'
