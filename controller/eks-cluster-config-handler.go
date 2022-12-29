@@ -700,12 +700,12 @@ func (h *Handler) newAWSServices(secretsCache wranglerv1.SecretCache, spec eksv1
 func (h *Handler) waitForCreationComplete(config *eksv1.EKSClusterConfig) (*eksv1.EKSClusterConfig, error) {
 	var err error
 
-	state, err := h.awsServices.eks.DescribeCluster(
-		&eks.DescribeClusterInput{
-			Name: aws.String(config.Spec.DisplayName),
-		})
+	state, err := awsservices.GetClusterState(awsservices.GetClusterStatusOpts{
+		EKSService: h.awsServices.eks,
+		Config:     config,
+	})
 	if err != nil {
-		return config, err
+		return config, fmt.Errorf("error getting cluster state: %v", err)
 	}
 
 	if state.Cluster == nil {
