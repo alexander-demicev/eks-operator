@@ -4,6 +4,7 @@ import (
 	"errors"
 
 	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/aws-sdk-go/service/ec2"
 	"github.com/aws/aws-sdk-go/service/eks"
 	"github.com/golang/mock/gomock"
 	. "github.com/onsi/ginkgo/v2"
@@ -49,6 +50,57 @@ var _ = Describe("GetClusterState", func() {
 	It("should fail to get cluster state", func() {
 		eksServiceMock.EXPECT().DescribeCluster(gomock.Any()).Return(nil, errors.New("error getting cluster state"))
 		_, err := GetClusterState(*getClusterStatusOptions)
+		Expect(err).To(HaveOccurred())
+	})
+})
+
+var _ = Describe("GetLaunchTemplateVersions", func() {
+	var (
+		mockController           *gomock.Controller
+		ec2ServiceMock           *mock_services.MockEC2ServiceInterface
+		getLaunchTemplateOptions *GetLaunchTemplateVersionsOpts
+	)
+
+	BeforeEach(func() {
+		mockController = gomock.NewController(GinkgoT())
+		ec2ServiceMock = mock_services.NewMockEC2ServiceInterface(mockController)
+		getLaunchTemplateOptions = &GetLaunchTemplateVersionsOpts{
+			EC2Service:       ec2ServiceMock,
+			LaunchTemplateID: aws.String("test-launch-template-id"),
+			Versions:         aws.StringSlice([]string{"1", "2"}),
+		}
+	})
+
+	AfterEach(func() {
+		mockController.Finish()
+	})
+
+	It("should successfully get launch template versions", func() {
+		ec2ServiceMock.EXPECT().DescribeLaunchTemplateVersions(
+			&ec2.DescribeLaunchTemplateVersionsInput{
+				LaunchTemplateId: getLaunchTemplateOptions.LaunchTemplateID,
+				Versions:         getLaunchTemplateOptions.Versions,
+			},
+		).Return(nil, nil)
+		_, err := GetLaunchTemplateVersions(*getLaunchTemplateOptions)
+		Expect(err).ToNot(HaveOccurred())
+	})
+
+	It("should fail to get launch template versions", func() {
+		ec2ServiceMock.EXPECT().DescribeLaunchTemplateVersions(gomock.Any()).Return(nil, errors.New("error getting launch template versions"))
+		_, err := GetLaunchTemplateVersions(*getLaunchTemplateOptions)
+		Expect(err).To(HaveOccurred())
+	})
+
+	It("should fail to get launch template versions when template id is missing", func() {
+		getLaunchTemplateOptions.LaunchTemplateID = nil
+		_, err := GetLaunchTemplateVersions(*getLaunchTemplateOptions)
+		Expect(err).To(HaveOccurred())
+	})
+
+	It("should fail to get launch template versions when versions are missing", func() {
+		getLaunchTemplateOptions.Versions = nil
+		_, err := GetLaunchTemplateVersions(*getLaunchTemplateOptions)
 		Expect(err).To(HaveOccurred())
 	})
 })

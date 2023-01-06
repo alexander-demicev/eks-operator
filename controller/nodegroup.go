@@ -26,38 +26,6 @@ const (
 	defaultStorageDeviceName = "/dev/xvda"
 )
 
-func createLaunchTemplate(clusterDisplayName string, ec2Service services.EC2ServiceInterface) (*eksv1.LaunchTemplate, error) {
-	// The first version of the rancher-managed launch template will be the default version.
-	// Since the default version cannot be deleted until the launch template is deleted, it will not be used for any node group.
-	// Also, launch templates cannot be created blank, so fake userdata is added to the first version.
-	launchTemplateCreateInput := &ec2.CreateLaunchTemplateInput{
-		LaunchTemplateData: &ec2.RequestLaunchTemplateData{UserData: aws.String("cGxhY2Vob2xkZXIK")},
-		LaunchTemplateName: aws.String(fmt.Sprintf(launchTemplateNameFormat, clusterDisplayName)),
-		TagSpecifications: []*ec2.TagSpecification{
-			{
-				ResourceType: aws.String(ec2.ResourceTypeLaunchTemplate),
-				Tags: []*ec2.Tag{
-					{
-						Key:   aws.String(launchTemplateTagKey),
-						Value: aws.String(launchTemplateTagValue),
-					},
-				},
-			},
-		},
-	}
-
-	awsLaunchTemplateOutput, err := ec2Service.CreateLaunchTemplate(launchTemplateCreateInput)
-	if err != nil {
-		return nil, err
-	}
-
-	return &eksv1.LaunchTemplate{
-		Name:    awsLaunchTemplateOutput.LaunchTemplate.LaunchTemplateName,
-		ID:      awsLaunchTemplateOutput.LaunchTemplate.LaunchTemplateId,
-		Version: awsLaunchTemplateOutput.LaunchTemplate.LatestVersionNumber,
-	}, nil
-}
-
 func createNewLaunchTemplateVersion(launchTemplateID string, group eksv1.NodeGroup, ec2Service services.EC2ServiceInterface) (*eksv1.LaunchTemplate, error) {
 	launchTemplate, err := buildLaunchTemplateData(group, ec2Service)
 	if err != nil {
